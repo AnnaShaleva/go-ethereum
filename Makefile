@@ -47,4 +47,9 @@ devtools:
 help: Makefile
 	@echo " Choose a command run in go-ethereum:"
 	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'
-.PHONY: help
+.PHONY: help gh-docker-vars
+
+gh-docker-vars:
+
+gh-docker-vars:
+	@echo "fileDC=DC"
