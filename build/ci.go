@@ -538,6 +538,7 @@ func doDocker(cmdline []string) {
 	//  - ethereum/client-go:alltools-v<major>.<minor>.<patch> - Version tag publish on GitHub, Geth & tools
 	var tags []string
 
+	fmt.Printf("\nEnv info: %s\n\n", env.String())
 	switch {
 	case env.Branch == "master":
 		tags = []string{"latest"}
