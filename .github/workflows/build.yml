@@ -90,11 +90,13 @@ jobs:
           cache: true
 
       - name: Build geth
-        run: make all
+        run: |
+          make geth
+          ./build/bin/geth --version
 
       - name: Set env
         id: setvars
-        run: echo "version=$(./build/bin/geth -v | sed -e "s/^geth version //")" >> $GITHUB_ENV
+        run: echo "version=$(./build/bin/geth -v | sed -e "s/^geth version //")" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -112,7 +114,7 @@ jobs:
       - name: Set latest tag
         id: setlatest
         if: ${{ (github.event_name == 'release' && github.event.release.target_commitish == 'master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.use_latest_tag == 'true') }}
-        run: echo "latest=,${{ github.repository }}:latest" >> $GITHUB_OUTPUT
+        run: echo "latest=,annashaleva/geth:latest" >> $GITHUB_OUTPUT
 
       - name: Build and push Geth
         uses: docker/build-push-action@v5
@@ -123,5 +125,5 @@ jobs:
           build-args: |
             REPO=github.com/${{ github.repository }}
             VERSION=${{ steps.setvars.outputs.version }}
-          tags: ${{ github.repository }}:${{ steps.setvars.outputs.version }}${{ steps.setlatest.outputs.latest }}
+          tags: annashaleva/geth:${{ steps.setvars.outputs.version }}${{ steps.setlatest.outputs.latest }}
           file: Dockerfile
