@@ -99,4 +99,4 @@ jobs:
         run: env
 
       - name: Build and push
-        run: go run build/ci.go docker -image -manifest amd64 -upload annashaleva/geth
+        run: go run build/ci.go docker -image -upload annashaleva/geth
