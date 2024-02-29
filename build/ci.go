@@ -516,7 +516,7 @@ func doDocker(cmdline []string) {
 
 	// Skip building and pushing docker images for PR builds
 	env := build.Env()
-	maybeSkipArchive(env)
+	//maybeSkipArchive(env)
 
 	// Retrieve the upload credentials and authenticate
 	user := getenvBase64("DOCKER_HUB_USERNAME")
@@ -543,6 +543,8 @@ func doDocker(cmdline []string) {
 		tags = []string{"latest"}
 	case strings.HasPrefix(env.Tag, "v1."):
 		tags = []string{"stable", fmt.Sprintf("release-1.%d", params.VersionMinor), "v" + params.Version}
+	default:
+		tags = []string{fmt.Sprintf("development-%s", env.Commit)}
 	}
 	// If architecture specific image builds are requested, build and push them
 	if *image {
@@ -587,6 +589,7 @@ func doDocker(cmdline []string) {
 			}
 			build.MustRunCommand("docker", "image", "tag", fmt.Sprintf("%s:TAG", *upload), gethImage)
 			build.MustRunCommand("docker", "image", "tag", fmt.Sprintf("%s:alltools-TAG", *upload), toolImage)
+			fmt.Println("Pushing image")
 			build.MustRunCommand("docker", "push", gethImage)
 			build.MustRunCommand("docker", "push", toolImage)
 		}
@@ -654,6 +657,7 @@ func doDocker(cmdline []string) {
 			for _, arch := range strings.Split(*manifest, ",") {
 				gethSubImages = append(gethSubImages, gethImage+"-"+arch)
 			}
+			fmt.Println("Creating Geth manifest")
 			build.MustRunCommand("docker", append([]string{"manifest", "create", gethImage}, gethSubImages...)...)
 			build.MustRunCommand("docker", "manifest", "push", gethImage)
 		}
@@ -665,6 +669,7 @@ func doDocker(cmdline []string) {
 			for _, arch := range strings.Split(*manifest, ",") {
 				toolSubImages = append(toolSubImages, toolImage+"-"+arch)
 			}
+			fmt.Println("Creating Alltools manifest")
 			build.MustRunCommand("docker", append([]string{"manifest", "create", toolImage}, toolSubImages...)...)
 			build.MustRunCommand("docker", "manifest", "push", toolImage)
 		}

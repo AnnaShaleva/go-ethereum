@@ -74,9 +74,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_image:
-    needs: build_cli
     name: Build and push docker image
     runs-on: ubuntu-20.04
+    if: ${{ (github.event_name == 'release' && github.event.release.target_commitish == 'master') || (github.event_name == 'workflow_dispatch') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -90,30 +90,13 @@ jobs:
           go-version: '1.21'
           cache: true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set env
+        run: |
+          echo "DOCKER_HUB_USERNAME=$(echo ${{ secrets.DOCKERHUB_USERNAME }} | base64)" >> $GITHUB_ENV
+          echo "DOCKER_HUB_PASSWORD=$(echo ${{ secrets.DOCKERHUB_PASSWORD }} | base64)" >> $GITHUB_ENV
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build geth
-        run: make all
-
-      - name: Login to DockerHub
-        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push_image == 'true') }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Set vars
-        id: setvars
-        run: make gh-docker-vars >> $GITHUB_OUTPUT
-
-      - name: Set latest tag
-        id: setlatest
-        if: ${{ (github.event_name == 'release' && github.event.release.target_commitish == 'master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.use_latest_tag == 'true') }}
-        run: echo "latest=,${{ steps.setvars.outputs.repo }}:latest" >> $GITHUB_OUTPUT
+      - name: Check env
+        run: env
 
       - name: Build and push
-        run: go run build/ci.go docker -image -manifest amd64,arm64 -upload annashaleva/geth
+        run: go run build/ci.go docker -image -manifest amd64 -upload annashaleva/geth
