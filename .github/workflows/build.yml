@@ -94,8 +94,7 @@ jobs:
 
       - name: Set env
         id: setvars
-        run: |
-          echo 'version=$(build/bin/geth -v | sed -e "s/^geth version //"' >> $GITHUB_ENV
+        run: echo "version=$(./build/bin/geth -v | sed -e "s/^geth version //")" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -109,8 +108,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-
 
       - name: Set latest tag
         id: setlatest
