@@ -3,7 +3,7 @@ name: Build
 on:
   pull_request:
     branches:
-      - master
+      - bane-main
     types: [opened, synchronize]
     paths-ignore:
       - 'scripts/**'
@@ -11,7 +11,7 @@ on:
   push:
     # Build for the bane-main branch.
     branches:
-      - master
+      - bane-main
   release:
     types:
       - published
@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{matrix.os.name}}
     strategy:
       matrix:
-        os: [{ name: ubuntu-22.04, bin-name: linux }]
+        os: [{ name: ubuntu-22.04, bin-name: linux }, { name: macos-12, bin-name: darwin }]
         arch: [amd64, arm64]
 
     steps:
@@ -52,22 +52,34 @@ jobs:
           go-version: '1.21'
           cache: true
 
-      - name: Build geth
+      - name: Build Alltools
         run: make all
 
-      - name: Rename geth binary
-        run: mv ./build/bin/geth* ./build/bin/geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}${{ (matrix.os.bin-name == 'windows' && '.exe') || '' }}
+      - name: Prepare Geth and Alltools target binaries
+        run: |
+          mkdir ./build/standalone
+          cp ./build/bin/geth ./build/standalone/geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}
+          mv ./build/bin/ ./build/alltools-${{ matrix.os.bin-name }}-${{ matrix.arch }}
 
-      - name: Upload artifact
+      - name: Upload Geth artifact
         uses: actions/upload-artifact@v4
         with:
           name: geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}
-          path: ./build/bin/geth*
+          path: ./build/standalone/geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}
           if-no-files-found: error
 
-      - name: Attach binary to the release as an asset
+      - name: Upload Alltools artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alltools-${{ matrix.os.bin-name }}-${{ matrix.arch }}
+          path: ./build/alltools-${{ matrix.os.bin-name }}-${{ matrix.arch }}
+          if-no-files-found: error
+
+      - name: Attach binaries to the release as assets
         if: ${{ github.event_name == 'release' }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./build/bin/geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}${{ (matrix.os.bin-name == 'windows' && '.exe') || '' }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} ./build/standalone/geth-${{ matrix.os.bin-name }}-${{ matrix.arch }}
+          gh release upload ${{ github.event.release.tag_name }} ./build/alltools-${{ matrix.os.bin-name }}-${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -112,8 +124,10 @@ jobs:
 
       - name: Set latest tag
         id: setlatest
-        if: ${{ (github.event_name == 'release' && github.event.release.target_commitish == 'master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.use_latest_tag == 'true') }}
-        run: echo "latest=,annashaleva/geth:latest" >> $GITHUB_OUTPUT
+        if: ${{ (github.event_name == 'release' && github.event.release.target_commitish == 'bane-main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.use_latest_tag == 'true') }}
+        run: |
+          echo "latest=,annashaleva/neox_nodes:latest" >> $GITHUB_OUTPUT
+          echo "alltoolslatest=,annashaleva/neox_nodes/alltools:latest" >> $GITHUB_OUTPUT
 
       - name: Build and push Geth
         uses: docker/build-push-action@v5
@@ -124,5 +138,19 @@ jobs:
           build-args: |
             REPO=github.com/${{ github.repository }}
             VERSION=${{ steps.setvars.outputs.version }}
-          tags: annashaleva/geth:${{ steps.setvars.outputs.version }}${{ steps.setlatest.outputs.latest }}
+            COMMIT=${{ github.sha }}
+          tags: annashaleva/neox_nodes:${{ steps.setvars.outputs.version }}${{ steps.setlatest.outputs.latest }}
           file: Dockerfile
+
+      - name: Build and push Alltools
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push_image == 'true') }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            REPO=github.com/${{ github.repository }}
+            VERSION=${{ steps.setvars.outputs.version }}
+            COMMIT=${{ github.sha }}
+          tags: annashaleva/neox_nodes/alltools:${{ steps.setvars.outputs.version }}${{ steps.setlatest.outputs.alltoolslatest }}
+          file: Dockerfile.alltools
