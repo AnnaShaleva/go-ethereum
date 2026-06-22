@@ -65,8 +65,13 @@ jobs:
 
       - name: Attach binaries to the release as assets
         if: ${{ github.event_name == 'release' }}
-        run: |
-          gh release upload ${{ github.event.release.tag_name }} ./build/standalone/geth-${{ matrix.bin.arch }} ./build/alltools-${{ matrix.bin.arch }}.zip ./config/genesis_mainnet.json ./config/genesis_testnet.json
+        run: gh release upload ${{ github.event.release.tag_name }} ./build/standalone/geth-${{ matrix.bin.arch }} ./build/alltools-${{ matrix.bin.arch }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attach genesis configuration files to the release as assets
+        if: ${{ github.event_name == 'release' && matrix.bin.arch == 'linux-amd64'}}
+        run: gh release upload ${{ github.event.release.tag_name }} ./config/genesis_mainnet.json ./config/genesis_testnet.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -74,7 +79,7 @@ jobs:
     name: Build and push Docker image
     needs: build_cli
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
+    if: false
 
     steps:
       - uses: actions/checkout@v4
