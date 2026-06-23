@@ -54,6 +54,7 @@ jobs:
 
       - name: Build Alltools
         run: |
+          go env -w CGO_ENABLED=1
           make all
           ./build/bin/geth --version
 
