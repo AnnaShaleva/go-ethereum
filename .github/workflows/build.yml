@@ -52,11 +52,16 @@ jobs:
           go-version: '1.24'
           cache: true
 
-      - name: Build Alltools
+      - name: Enable CGO
         run: |
-          go env -w CGO_ENABLED=1
+          go env
+          go env -w CGO_ENABLED=0
+      - name: Build alltools
+        run: |
+          go env
           make all
           ./build/bin/geth --version
+          wc -c < ./build/bin/geth
 
       - name: Prepare Geth and Alltools target binaries
         run: |
